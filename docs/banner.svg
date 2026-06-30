@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-label="Triage — first aid for your to-do list">
+  <rect width="1200" height="420" fill="#F6F2E9"/>
+  <rect x="0" y="0" width="1200" height="6" fill="#1A1812"/>
+  <rect x="0" y="414" width="1200" height="6" fill="#1A1812"/>
+
+  <!-- kicker -->
+  <text x="64" y="92" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="15" letter-spacing="6" fill="#54503F">— AI PRODUCTIVITY COPILOT</text>
+  <line x1="64" y1="108" x2="1136" y2="108" stroke="#D7CFBC" stroke-width="1.5"/>
+
+  <!-- wordmark -->
+  <text x="60" y="252" font-family="Georgia, 'Times New Roman', serif" font-size="172" letter-spacing="-4" fill="#1A1812">Triage</text>
+
+  <!-- tagline -->
+  <text x="66" y="304" font-family="Georgia, serif" font-style="italic" font-size="30" fill="#54503F">First aid for your to-do list.</text>
+
+  <!-- arc -->
+  <g font-family="ui-monospace, Menlo, Consolas, monospace" font-size="15" letter-spacing="3">
+    <text x="66" y="364" fill="#DA3A1B">01</text>
+    <text x="98" y="364" fill="#1A1812">PANIC</text>
+    <text x="240" y="364" fill="#DA3A1B">02</text>
+    <text x="272" y="364" fill="#1A1812">PLAN</text>
+    <text x="404" y="364" fill="#DA3A1B">03</text>
+    <text x="436" y="364" fill="#1A1812">MOTION</text>
+  </g>
+
+  <!-- palette swatches -->
+  <g>
+    <rect x="980" y="150" width="40" height="40" fill="#F6F2E9" stroke="#D7CFBC"/>
+    <rect x="1020" y="150" width="40" height="40" fill="#1A1812"/>
+    <rect x="1060" y="150" width="40" height="40" fill="#DA3A1B"/>
+    <rect x="1100" y="150" width="40" height="40" fill="#C2841C"/>
+    <rect x="1140" y="150" width="0" height="40" fill="#5C6B4E"/>
+    <rect x="980" y="190" width="40" height="40" fill="#5C6B4E"/>
+    <rect x="1020" y="190" width="40" height="40" fill="#EDE7D8"/>
+    <rect x="1060" y="190" width="40" height="40" fill="#D7CFBC"/>
+    <rect x="1100" y="190" width="40" height="40" fill="#54503F"/>
+    <text x="980" y="252" font-family="ui-monospace, Menlo, monospace" font-size="12" letter-spacing="2" fill="#54503F">PAPER &amp; INK</text>
+  </g>
+</svg>
