@@ -1,0 +1,255 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   Triage — design tokens. "Paper & ink": warm cream + warm near-black.
+   Tokens are CSS custom properties so the theme is portable and swappable.
+   ========================================================================== */
+
+:root {
+  --paper: #f6f2e9; /* warm cream — the page */
+  --paper-2: #ede7d8; /* slightly deeper panels / insets */
+  --paper-3: #e4dccb; /* deepest inset / hover */
+  --ink: #1a1812; /* warm near-black — never pure #000 */
+  --ink-soft: #54503f; /* muted / secondary text */
+  --rule: #d7cfbc; /* hairlines */
+  --signal: #c02c10; /* vermilion — urgent + primary CTA, used sparingly (AA on paper) */
+  --amber: #835711; /* "due soon" — deep ochre that clears AA on paper */
+  --calm: #5c6b4e; /* done / scheduled / resolved */
+  --selection: rgba(192, 44, 16, 0.16);
+}
+
+[data-theme="dark"] {
+  --paper: #15140e;
+  --paper-2: #1e1c14;
+  --paper-3: #28251a;
+  --ink: #f1ecdd;
+  --ink-soft: #b7af99;
+  --rule: #2d2b20;
+  --signal: #e8502f;
+  --amber: #d69a33;
+  --calm: #93a875;
+  --selection: rgba(232, 80, 47, 0.22);
+}
+
+/* Map runtime tokens into Tailwind's theme. `inline` makes utilities emit
+   `var(--token)` so they react to the [data-theme] switch at runtime. */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-paper-3: var(--paper-3);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-rule: var(--rule);
+  --color-signal: var(--signal);
+  --color-amber: var(--amber);
+  --color-calm: var(--calm);
+
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+}
+
+/* ============================================================================
+   Base
+   ========================================================================== */
+
+* {
+  border-color: var(--rule);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "kern", "liga", "calt";
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+::selection {
+  background: var(--selection);
+}
+
+/* Bespoke focus ring — square, ink, deliberate. */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Thin, paper-toned scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--rule);
+  border: 3px solid var(--paper);
+}
+
+/* ============================================================================
+   Editorial type system
+   ========================================================================== */
+
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
+
+.type-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 430;
+  font-size: clamp(3.25rem, 8vw, 7rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+
+.type-h1 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 450;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+}
+
+.type-h2 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 500;
+  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.type-numeral {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--ink-soft);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.measure {
+  max-width: 68ch;
+}
+
+/* Table-of-contents dotted leader: title …… deadline */
+.leader {
+  flex: 1 1 auto;
+  align-self: flex-end;
+  margin: 0 0.6rem 0.32rem;
+  border-bottom: 1.5px dotted var(--rule);
+  min-width: 1.5rem;
+}
+
+/* ============================================================================
+   Motion — restrained, and fully reduced-motion safe
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Subtle, slow attention treatment for the Right Now card (not a loud pulse).
+   Ink, not signal — vermilion stays reserved for genuine urgency. */
+@keyframes breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--ink) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 42%, transparent);
+  }
+}
+
+.attention {
+  animation: breathe 5.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .attention {
+    animation: none;
+  }
+}
+
+/* Editorial skeleton shimmer for loading states */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--paper-2);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--paper-3) 70%, transparent),
+    transparent
+  );
+  animation: shimmer 1.8s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+}
+
+/* Restrained "live" blink for the dictation indicator (custom, not stock pulse). */
+@keyframes signal-fade {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.signal-blink {
+  animation: signal-fade 2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .signal-blink {
+    animation: none;
+  }
+}
