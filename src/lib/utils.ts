@@ -193,3 +193,38 @@ export function formatDuration(mins: number): string {
   const m = mins % 60;
   return m === 0 ? `${h} hr` : `${h} hr ${m} min`;
 }
+
+/** Local "YYYY-MM-DD" key for a timestamp (used by the streak history). */
+export function dateKey(ms: number): string {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/**
+ * Consecutive days with at least one completion, ending today (or yesterday as
+ * a one-day grace so the streak doesn't reset the instant a new day starts).
+ */
+export function currentStreak(
+  history: Record<string, number>,
+  nowMs: number,
+): number {
+  const DAY = 86_400_000;
+  const has = (ms: number) => (history[dateKey(ms)] ?? 0) > 0;
+  let anchor = nowMs;
+  if (!has(anchor)) {
+    anchor -= DAY;
+    if (!has(anchor)) return 0;
+  }
+  let streak = 0;
+  let cur = anchor;
+  while (has(cur)) {
+    streak += 1;
+    cur -= DAY;
+  }
+  return streak;
+}
+
+/** Strip any timezone designator so a datetime is treated as floating-local. */
+export function toFloating(raw: string): string {
+  return (raw || "").replace(/(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/i, "").trim();
+}

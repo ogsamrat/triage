@@ -1,7 +1,7 @@
 import { TASK_TYPES, type Block, type BlockKind, type Task, type TaskType } from "./types";
-import type { BreakdownGen, IngestGen, ScheduleGen } from "./schemas";
+import type { BreakdownGen, CommandGen, IngestGen, ScheduleGen } from "./schemas";
 import { clamp, floatingToMs, genId, toFloatingISO } from "./utils";
-import type { RightNow, Step } from "./types";
+import type { CommandAction, CommandActionKind, RightNow, Step } from "./types";
 
 function normalizeType(raw: string | undefined): TaskType {
   const t = (raw || "").toLowerCase().trim();
@@ -107,4 +107,42 @@ export function normalizeSchedule(gen: ScheduleGen): Block[] {
   }
 
   return blocks;
+}
+
+const ACTION_KINDS: CommandActionKind[] = [
+  "complete",
+  "reopen",
+  "remove",
+  "reschedule",
+  "add",
+  "replan",
+];
+
+export function normalizeActions(gen: CommandGen): CommandAction[] {
+  const out: CommandAction[] = [];
+  for (const a of gen.actions ?? []) {
+    const kind = (a.kind || "").toLowerCase().trim();
+    if (!(ACTION_KINDS as string[]).includes(kind)) continue;
+    const k = kind as CommandActionKind;
+    const taskId = (a.taskId || "").trim() || undefined;
+    const title = (a.title || "").trim() || undefined;
+
+    // Validate required fields per kind; drop no-ops.
+    if ((k === "complete" || k === "reopen" || k === "remove") && !taskId) continue;
+    if (k === "reschedule" && (!taskId || !a.deadline)) continue;
+    if (k === "add" && !title) continue;
+
+    out.push({
+      kind: k,
+      taskId,
+      title,
+      type: a.type ? normalizeType(a.type) : undefined,
+      deadline: a.deadline ? cleanDateTime(a.deadline) : undefined,
+      estimatedMinutes:
+        typeof a.estimatedMinutes === "number" ? a.estimatedMinutes : undefined,
+      importance: typeof a.importance === "number" ? a.importance : undefined,
+      urgency: typeof a.urgency === "number" ? a.urgency : undefined,
+    });
+  }
+  return out;
 }

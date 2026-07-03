@@ -84,3 +84,35 @@ export const ScheduleGenSchema = z.object({
   blocks: z.array(BlockGenSchema),
 });
 export type ScheduleGen = z.infer<typeof ScheduleGenSchema>;
+
+export const CommandActionGenSchema = z.object({
+  kind: z
+    .string()
+    .describe("one of: complete, reopen, remove, reschedule, add, replan"),
+  taskId: z
+    .string()
+    .optional()
+    .describe("target task id — required for complete/reopen/remove/reschedule"),
+  title: z.string().optional().describe("title for a newly added task"),
+  type: z
+    .string()
+    .optional()
+    .describe("assignment, exam, meeting, bill, errand, interview, or other"),
+  deadline: z
+    .string()
+    .optional()
+    .describe("floating-local 'YYYY-MM-DDTHH:MM:SS' for add / reschedule"),
+  estimatedMinutes: z.number().optional(),
+  importance: z.number().optional(),
+  urgency: z.number().optional(),
+});
+
+export const CommandGenSchema = z.object({
+  reply: z
+    .string()
+    .describe(
+      "one or two sharp sentences confirming what you changed, or answering the question. Editorial voice.",
+    ),
+  actions: z.array(CommandActionGenSchema),
+});
+export type CommandGen = z.infer<typeof CommandGenSchema>;

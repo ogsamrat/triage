@@ -59,3 +59,31 @@ export interface WorkingHours {
 }
 
 export type Theme = "light" | "dark";
+
+/** Conversational-edit actions the copilot can apply to state. */
+export type CommandActionKind =
+  | "complete"
+  | "reopen"
+  | "remove"
+  | "reschedule"
+  | "add"
+  | "replan";
+
+export interface CommandAction {
+  kind: CommandActionKind;
+  taskId?: string;
+  title?: string;
+  type?: TaskType;
+  deadline?: string;
+  estimatedMinutes?: number;
+  importance?: number;
+  urgency?: number;
+}
+
+/** date (YYYY-MM-DD) -> number of tasks completed that day, for the streak. */
+export type History = Record<string, number>;
+
+export interface FocusPrefs {
+  focusMinutes: number;
+  breakMinutes: number;
+}
