@@ -36,6 +36,9 @@ const groq = createGroq({ apiKey });
 
 export const model = groq("llama-3.3-70b-versatile");
 
+/** Multimodal model for screenshot / syllabus parsing (Llama 4 Scout). */
+export const visionModel = groq("meta-llama/llama-4-scout-17b-16e-instruct");
+
 /** Returns true when an API key is configured (so routes can fail gracefully). */
 export function hasApiKey(): boolean {
   return Boolean(
