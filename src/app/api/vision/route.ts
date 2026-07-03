@@ -73,9 +73,11 @@ Then choose the single task to START RIGHT NOW with a punchy headline, a one-sen
     return NextResponse.json(result);
   } catch (err) {
     console.error("[/api/vision]", err);
+    // Soft failure (200 + error), matching /api/command and the empty-tasks branch,
+    // so the UI shows a friendly message and keeps its board.
     return NextResponse.json(
       { error: "Couldn't read that image. Try again, or type your list instead." },
-      { status: 500 },
+      { status: 200 },
     );
   }
 }

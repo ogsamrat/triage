@@ -211,12 +211,11 @@ export default function Home() {
         timezone: browserTimezone(),
       });
       const list = Array.isArray(actions) ? actions : [];
-      applyActions(list, Date.now());
-      const structural = list.filter((a) => a.kind !== "replan");
+      const appliedCount = applyActions(list, Date.now());
       if (list.some((a) => a.kind === "replan")) {
         void runSchedule(undefined, { reflow: true });
       }
-      return { reply, appliedCount: structural.length };
+      return { reply, appliedCount };
     },
     [applyActions, runSchedule],
   );

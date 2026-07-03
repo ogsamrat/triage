@@ -11,12 +11,8 @@ function formatIcsDate(v: string): string {
 }
 
 function unescape(v: string): string {
-  return v
-    .replace(/\\n/gi, " ")
-    .replace(/\\,/g, ",")
-    .replace(/\\;/g, ";")
-    .replace(/\\\\/g, "\\")
-    .trim();
+  // Single pass so an escaped backslash is consumed before newline detection.
+  return v.replace(/\\([\\;,nN])/g, (_, c) => (c === "n" || c === "N" ? " " : c)).trim();
 }
 
 export function icsToText(ics: string): string {

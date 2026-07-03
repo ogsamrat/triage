@@ -38,8 +38,8 @@ interface TriageState {
   toggleStep: (taskId: string, stepId: string) => void;
   // tasks
   toggleTask: (taskId: string) => void;
-  // conversational edits
-  applyActions: (actions: CommandAction[], nowMs: number) => void;
+  // conversational edits — returns the count of actions that actually changed state
+  applyActions: (actions: CommandAction[], nowMs: number) => number;
   // focus mode
   setFocusTask: (taskId: string | null) => void;
   setFocusPrefs: (prefs: Partial<FocusPrefs>) => void;
@@ -108,7 +108,8 @@ export const useTriage = create<TriageState>()(
           };
         }),
 
-      applyActions: (actions, nowMs) =>
+      applyActions: (actions, nowMs) => {
+        let applied = 0;
         set((s) => {
           let tasks = s.tasks.map((t) => ({ ...t }));
           const steps = { ...s.steps };
@@ -136,31 +137,39 @@ export const useTriage = create<TriageState>()(
               if (t && !t.done) {
                 t.done = true;
                 bump(1);
+                applied++;
               }
             } else if (a.kind === "reopen" && a.taskId) {
               const t = tasks.find((x) => x.id === a.taskId);
               if (t && t.done) {
                 t.done = false;
                 bump(-1);
+                applied++;
               }
             } else if (a.kind === "remove" && a.taskId) {
+              const before = tasks.length;
               tasks = tasks.filter((x) => x.id !== a.taskId);
-              delete steps[a.taskId];
-              if (rightNow?.taskId === a.taskId) {
-                const next = tasks.find((x) => !x.done) ?? tasks[0];
-                rightNow = next
-                  ? {
-                      taskId: next.id,
-                      headline: "Next up",
-                      why: next.rationale || "The next thing worth starting.",
-                      firstStep: "Open it and take the first small step.",
-                    }
-                  : null;
+              if (tasks.length !== before) {
+                applied++;
+                delete steps[a.taskId];
+                if (rightNow?.taskId === a.taskId) {
+                  const next = tasks.find((x) => !x.done) ?? tasks[0];
+                  rightNow = next
+                    ? {
+                        taskId: next.id,
+                        headline: "Next up",
+                        why: next.rationale || "The next thing worth starting.",
+                        firstStep: "Open it and take the first small step.",
+                      }
+                    : null;
+                }
               }
             } else if (a.kind === "reschedule" && a.taskId && a.deadline) {
-              tasks = tasks.map((x) =>
-                x.id === a.taskId ? { ...x, deadline: toFloating(a.deadline!) } : x,
-              );
+              const t = tasks.find((x) => x.id === a.taskId);
+              if (t) {
+                t.deadline = toFloating(a.deadline);
+                applied++;
+              }
             } else if (a.kind === "add" && a.title) {
               const type = (KNOWN as string[]).includes(a.type ?? "")
                 ? (a.type as TaskType)
@@ -177,11 +186,14 @@ export const useTriage = create<TriageState>()(
                 rationale: "Added from a request.",
                 done: false,
               });
+              applied++;
             }
           }
           tasks.forEach((t, i) => (t.priorityRank = i + 1));
           return { tasks, steps, history, rightNow, isSeed: false };
-        }),
+        });
+        return applied;
+      },
 
       setFocusTask: (taskId) => set({ focusTaskId: taskId }),
       setFocusPrefs: (prefs) =>

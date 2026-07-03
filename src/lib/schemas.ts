@@ -8,7 +8,7 @@ import { z } from "zod";
 
 export const TaskGenSchema = z.object({
   id: z.string().optional().describe("short stable id, e.g. 't1'"),
-  title: z.string().describe("concise, specific task title"),
+  title: z.string().optional().describe("concise, specific task title"),
   type: z
     .string()
     .optional()
@@ -57,7 +57,7 @@ export const IngestGenSchema = z.object({
 export type IngestGen = z.infer<typeof IngestGenSchema>;
 
 export const StepGenSchema = z.object({
-  label: z.string().describe("a concrete, startable action"),
+  label: z.string().optional().describe("a concrete, startable action"),
   minutes: z.number().optional().describe("rough minutes for this step (10-30)"),
 });
 
@@ -73,9 +73,11 @@ export const BlockGenSchema = z.object({
   title: z.string().optional().describe("what happens in this block"),
   start: z
     .string()
+    .optional()
     .describe("local datetime 'YYYY-MM-DDTHH:MM:SS', no timezone designator"),
   end: z
     .string()
+    .optional()
     .describe("local datetime 'YYYY-MM-DDTHH:MM:SS', no timezone designator"),
   kind: z.string().optional().describe("one of: focus, admin, break, buffer"),
 });
@@ -110,6 +112,7 @@ export const CommandActionGenSchema = z.object({
 export const CommandGenSchema = z.object({
   reply: z
     .string()
+    .optional()
     .describe(
       "one or two sharp sentences confirming what you changed, or answering the question. Editorial voice.",
     ),

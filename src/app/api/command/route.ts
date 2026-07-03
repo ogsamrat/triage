@@ -52,8 +52,8 @@ Decide what to change and return a short reply plus a list of actions. Use the E
 - complete { taskId } — mark a task done
 - reopen { taskId } — mark a done task not-done
 - remove { taskId } — delete a task
-- reschedule { taskId, deadline } — set a new floating-local "YYYY-MM-DDTHH:MM:SS" (resolve relative dates against now)
-- add { title, type?, deadline?, estimatedMinutes?, importance?, urgency? } — add a new task
+- reschedule { taskId, deadline } — set a new floating-local "YYYY-MM-DDTHH:MM:SS" with NO timezone designator (no Z, no offset); resolve relative dates against now
+- add { title, type?, deadline?, estimatedMinutes?, importance?, urgency? } — add a new task (any deadline floating-local "YYYY-MM-DDTHH:MM:SS", no timezone designator, resolved against now)
 - replan {} — include this (once) when the plan should be rebuilt after your changes, or when the user asks to re-plan / reflow the day
 
 If the user is only asking a question (e.g. "what should I drop?"), return an empty actions array and answer in the reply. Keep the reply to one or two sharp sentences.`;
