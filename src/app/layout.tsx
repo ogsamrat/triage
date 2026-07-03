@@ -3,11 +3,25 @@ import "./globals.css";
 import { fontVariables } from "@/lib/fonts";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://triage-plum.vercel.app"),
   title: "Triage — first aid for your to-do list",
   description:
     "An AI productivity copilot that tells you what to do right now, and breaks it down so you actually start. Panic, then plan, then motion.",
   applicationName: "Triage",
-  authors: [{ name: "Triage" }],
+  authors: [{ name: "Samrat Talukdar" }],
+  openGraph: {
+    title: "Triage — first aid for your to-do list",
+    description:
+      "What to do right now, and the plan to finish it. Panic, then plan, then motion.",
+    type: "website",
+    images: ["/api/og"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Triage — first aid for your to-do list",
+    description: "What to do right now, and the plan to finish it.",
+    images: ["/api/og"],
+  },
 };
 
 export const viewport: Viewport = {
