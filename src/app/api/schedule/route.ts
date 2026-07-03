@@ -24,6 +24,7 @@ export async function POST(req: Request) {
     const availableHours: number | null =
       typeof body?.availableHours === "number" ? body.availableHours : null;
     const workingHours: WorkingHours = body?.workingHours ?? { start: "09:00", end: "21:00" };
+    const reflow: boolean = body?.reflow === true;
 
     const open = tasks.filter((t) => !t.done);
     if (open.length === 0) {
@@ -44,7 +45,11 @@ export async function POST(req: Request) {
           ? `The user has no focused time today. Don't schedule focus work — return an empty plan or only essential buffers.`
           : `The user only has ${availableHours} hour(s) of focused time today. Schedule only the work that earns the time — protect the soonest deadlines — and leave the rest unscheduled.`;
 
-    const prompt = `Build a concrete, time-blocked plan starting from the current time. Lay the tasks into blocks that respect deadlines and working hours, with NO overlaps. Front-load the work that's both important and due soonest. Insert short breaks between long focus blocks (a 10-15 min break after ~90 min of focus, plus a lunch break if the day is long). Be realistic — don't pack 10 hours into 4.
+    const reflowNote = reflow
+      ? `\nTHE DAY IS ALREADY UNDERWAY: the earlier plan slipped. Rebuild only what's left, starting from the current time, and be honest about the reduced hours remaining — protect the soonest deadlines and drop what no longer fits.`
+      : "";
+
+    const prompt = `Build a concrete, time-blocked plan starting from the current time. Lay the tasks into blocks that respect deadlines and working hours, with NO overlaps. Front-load the work that's both important and due soonest. Insert short breaks between long focus blocks (a 10-15 min break after ~90 min of focus, plus a lunch break if the day is long). Be realistic — don't pack 10 hours into 4.${reflowNote}
 
 Current datetime (local, floating): ${now}
 Working hours: ${workingHours.start}–${workingHours.end}
