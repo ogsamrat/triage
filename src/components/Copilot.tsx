@@ -8,83 +8,48 @@ import { cn } from "@/lib/utils";
 interface Msg {
   role: "user" | "assistant";
   content: string;
+  applied?: number;
 }
 
 const CHIPS = [
   "What should I drop?",
-  "What can wait until tomorrow?",
-  "I've only got 2 hours — what now?",
+  "I finished rent — replan the day",
+  "Push the essay to Wednesday",
+  "Add: buy groceries tomorrow",
 ];
 
-export function Copilot({ context }: { context: string }) {
+export function Copilot({
+  onSend,
+}: {
+  onSend: (message: string) => Promise<{ reply: string; appliedCount: number }>;
+}) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
-  const [streaming, setStreaming] = useState(false);
+  const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const send = async (text: string) => {
     const q = text.trim();
-    if (!q || streaming) return;
+    if (!q || busy) return;
     setInput("");
-    const next: Msg[] = [...messages, { role: "user", content: q }];
-    setMessages(next);
-    setStreaming(true);
-
-    const FALLBACK = "Lost the thread there — ask me again.";
-
+    setMessages((m) => [...m, { role: "user", content: q }]);
+    setBusy(true);
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // Workload context rides as its own field so the route can fold it into
-        // the system prompt (never evicted by the 12-message window).
-        body: JSON.stringify({ messages: next, context }),
-      });
-      const reader = res.body?.getReader();
-      const dec = new TextDecoder();
-      let acc = "";
-      if (reader) {
-        // Insert the placeholder only when streaming will actually fill it.
-        setMessages((m) => [...m, { role: "assistant", content: "" }]);
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          acc += dec.decode(value, { stream: true });
-          setMessages((m) => {
-            const copy = [...m];
-            copy[copy.length - 1] = { role: "assistant", content: acc };
-            return copy;
-          });
-          requestAnimationFrame(() => {
-            scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-          });
-        }
-        if (!acc.trim()) {
-          setMessages((m) => {
-            const copy = [...m];
-            copy[copy.length - 1] = { role: "assistant", content: FALLBACK };
-            return copy;
-          });
-        }
-      } else {
-        const txt = await res.text();
-        setMessages((m) => [...m, { role: "assistant", content: txt || FALLBACK }]);
-      }
+      const { reply, appliedCount } = await onSend(q);
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: reply || "Done.", applied: appliedCount },
+      ]);
     } catch {
-      // If a placeholder bubble was already inserted (mid-stream reject), fill
-      // it instead of leaving an empty bubble above the fallback.
-      setMessages((m) => {
-        const copy = [...m];
-        const last = copy[copy.length - 1];
-        if (last && last.role === "assistant" && !last.content.trim()) {
-          copy[copy.length - 1] = { role: "assistant", content: FALLBACK };
-          return copy;
-        }
-        return [...m, { role: "assistant", content: FALLBACK }];
-      });
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: "I couldn't do that — try rephrasing." },
+      ]);
     } finally {
-      setStreaming(false);
+      setBusy(false);
+      requestAnimationFrame(() =>
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }),
+      );
     }
   };
 
@@ -94,37 +59,40 @@ export function Copilot({ context }: { context: string }) {
         <span id="copilot-head" className="kicker">
           — Copilot
         </span>
-        <span className="kicker">Ask the editor</span>
+        <span className="kicker">Ask, or instruct</span>
       </div>
       <div className="border-t-2 border-ink" />
 
       <div className="mt-6 grid grid-cols-12 gap-x-6 gap-y-6">
         <div className="col-span-12 lg:col-span-8">
           {messages.length > 0 ? (
-            <div
-              ref={scrollRef}
-              className="mb-4 max-h-80 space-y-4 overflow-y-auto pr-1"
-            >
+            <div ref={scrollRef} className="mb-4 max-h-80 space-y-4 overflow-y-auto pr-1">
               {messages.map((m, i) => (
                 <div key={i}>
-                  <Kicker dash={false}>
-                    {m.role === "user" ? "You" : "The editor"}
-                  </Kicker>
+                  <div className="flex items-center gap-3">
+                    <Kicker dash={false}>{m.role === "user" ? "You" : "The editor"}</Kicker>
+                    {m.applied ? (
+                      <span className="mono text-[0.65rem] uppercase tracking-[0.1em] text-calm">
+                        {m.applied} change{m.applied === 1 ? "" : "s"} applied
+                      </span>
+                    ) : null}
+                  </div>
                   <p
                     className={cn(
                       "mt-1 whitespace-pre-wrap leading-relaxed",
                       m.role === "user" ? "text-ink-soft" : "text-ink",
                     )}
                   >
-                    {m.content || (streaming ? "…" : "")}
+                    {m.content}
                   </p>
                 </div>
               ))}
+              {busy ? <p className="mono text-xs text-ink-soft">thinking…</p> : null}
             </div>
           ) : (
             <p className="measure mb-4 font-display text-xl italic text-ink-soft">
-              &ldquo;Tell me what to cut, what can wait, or how to fit it into the
-              hours I&rsquo;ve actually got.&rdquo;
+              &ldquo;Tell me to drop something, push a deadline, add a task, or reflow the day — I
+              change the board, not just the subject.&rdquo;
             </p>
           )}
 
@@ -138,18 +106,13 @@ export function Copilot({ context }: { context: string }) {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about your workload…"
-              aria-label="Ask the copilot"
+              placeholder="Ask a question, or tell me what to change…"
+              aria-label="Ask or instruct the copilot"
               className="flex-1 rounded-[3px] border border-rule bg-paper-2 px-4 py-2.5 text-base text-ink placeholder:text-ink-soft/70 focus:border-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink focus-visible:outline-offset-2"
             />
-            <Button
-              type="submit"
-              variant="ink"
-              size="md"
-              disabled={streaming || input.trim().length === 0}
-            >
+            <Button type="submit" variant="ink" size="md" disabled={busy || input.trim().length === 0}>
               <SendIcon width={15} height={15} />
-              {streaming ? "…" : "Ask"}
+              {busy ? "…" : "Send"}
             </Button>
           </form>
         </div>
@@ -161,7 +124,7 @@ export function Copilot({ context }: { context: string }) {
               <li key={c}>
                 <button
                   onClick={() => send(c)}
-                  disabled={streaming}
+                  disabled={busy}
                   className="text-left font-display text-[0.95rem] italic text-ink-soft underline-offset-4 hover:text-ink hover:underline disabled:opacity-50 cursor-pointer"
                 >
                   {c}
