@@ -11,7 +11,7 @@ import {
 } from "@/lib/utils";
 import { useSpeak } from "@/hooks/useSpeak";
 import { Button, Kicker } from "./primitives";
-import { ArrowDownIcon, CheckIcon, PlayIcon, SparkIcon, StopIcon } from "./icons";
+import { ArrowDownIcon, CheckIcon, FocusIcon, PlayIcon, SparkIcon, StopIcon } from "./icons";
 import { statusText } from "./status";
 
 export function RightNowCard({
@@ -23,6 +23,7 @@ export function RightNowCard({
   breakdownError,
   onBreakdown,
   onToggleStep,
+  onFocus,
 }: {
   rightNow: RightNow;
   task: Task | undefined;
@@ -32,6 +33,7 @@ export function RightNowCard({
   breakdownError: string | null;
   onBreakdown: () => void;
   onToggleStep: (stepId: string) => void;
+  onFocus: () => void;
 }) {
   const reduce = useReducedMotion();
   const { supported: ttsOk, speaking, speak, stop } = useSpeak();
@@ -108,6 +110,10 @@ export function RightNowCard({
                   : hasSteps
                     ? "Re-break it down"
                     : "Break it down"}
+              </Button>
+              <Button variant="outline" size="lg" onClick={onFocus}>
+                <FocusIcon width={15} height={15} />
+                Focus
               </Button>
               {ttsOk ? (
                 <Button variant="outline" size="lg" onClick={readAloud}>

@@ -13,12 +13,14 @@ import { Button, IconButton, Kicker, Panel, controlClasses } from "./primitives"
 import {
   CalendarIcon,
   DownloadIcon,
+  FocusIcon,
   MinusIcon,
   PlusIcon,
   RefreshIcon,
   SparkIcon,
 } from "./icons";
 import { blockAccent, blockKindLabel } from "./status";
+import { ShareButton } from "./ShareButton";
 
 function blockMinutes(b: Block): number {
   const ms = floatingToMs(b.end) - floatingToMs(b.start);
@@ -35,6 +37,10 @@ export function ThePlan({
   onReplan,
   onSetAvailableHours,
   onSetWorkingHours,
+  onFocusTask,
+  shareHeadline,
+  taskCount,
+  streak,
 }: {
   schedule: Block[];
   availableHours: number | null;
@@ -45,6 +51,10 @@ export function ThePlan({
   onReplan: () => void;
   onSetAvailableHours: (n: number | null) => void;
   onSetWorkingHours: (wh: WorkingHours) => void;
+  onFocusTask: (taskId: string) => void;
+  shareHeadline: string;
+  taskCount: number;
+  streak: number;
 }) {
   const focusMin = schedule
     .filter((b) => b.kind === "focus")
@@ -120,6 +130,14 @@ export function ThePlan({
         </label>
 
         <div className="ml-auto flex items-center gap-3">
+          {schedule.length ? (
+            <ShareButton
+              headline={shareHeadline}
+              focus={formatDuration(focusMin)}
+              tasks={taskCount}
+              streak={streak}
+            />
+          ) : null}
           {schedule.length ? (
             <button
               className={controlClasses("outline", "md")}
@@ -237,6 +255,15 @@ export function ThePlan({
                           <CalendarIcon width={14} height={14} />
                           Add to Google Calendar
                         </a>
+                        {b.taskId && !isBreakish ? (
+                          <button
+                            className={controlClasses("ghost", "sm")}
+                            onClick={() => onFocusTask(b.taskId)}
+                          >
+                            <FocusIcon width={14} height={14} />
+                            Focus
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   </div>

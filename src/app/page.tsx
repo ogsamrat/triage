@@ -4,20 +4,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTriage } from "@/lib/store";
 import { useMounted } from "@/hooks/useMounted";
 import { useNow } from "@/hooks/useNow";
-import type { Step, Task, Theme } from "@/lib/types";
-import {
-  clockLabel,
-  deadlineDateLabel,
-  formatDuration,
-  toFloatingISO,
-} from "@/lib/utils";
+import type { CommandAction, Step, Task, Theme } from "@/lib/types";
+import { currentStreak, toFloatingISO } from "@/lib/utils";
 import { Masthead } from "@/components/Masthead";
 import { Nudges } from "@/components/Nudges";
+import { StreakStrip } from "@/components/StreakStrip";
 import { BrainDump } from "@/components/BrainDump";
 import { RightNowCard } from "@/components/RightNowCard";
 import { TriageBoard } from "@/components/TriageBoard";
+import { MissedBlock } from "@/components/MissedBlock";
 import { ThePlan } from "@/components/ThePlan";
 import { Copilot } from "@/components/Copilot";
+import { FocusMode } from "@/components/FocusMode";
 import { Button, Panel } from "@/components/primitives";
 
 function browserTimezone(): string {
@@ -53,6 +51,9 @@ export default function Home() {
   const steps = useTriage((s) => s.steps);
   const availableHours = useTriage((s) => s.availableHours);
   const workingHours = useTriage((s) => s.workingHours);
+  const history = useTriage((s) => s.history);
+  const focusTaskId = useTriage((s) => s.focusTaskId);
+  const focusPrefs = useTriage((s) => s.focusPrefs);
   const hydrated = useTriage((s) => s._hydrated);
   const isSeed = useTriage((s) => s.isSeed);
 
@@ -61,6 +62,8 @@ export default function Home() {
   const setStepsFor = useTriage((s) => s.setStepsFor);
   const toggleTask = useTriage((s) => s.toggleTask);
   const toggleStep = useTriage((s) => s.toggleStep);
+  const applyActions = useTriage((s) => s.applyActions);
+  const setFocusTask = useTriage((s) => s.setFocusTask);
   const setAvailableHours = useTriage((s) => s.setAvailableHours);
   const setWorkingHours = useTriage((s) => s.setWorkingHours);
   const setTheme = useTriage((s) => s.setTheme);
@@ -107,7 +110,7 @@ export default function Home() {
   }, [hydrated, isSeed, reseedToNow]);
 
   const runSchedule = useCallback(
-    async (tasksArg?: Task[]) => {
+    async (tasksArg?: Task[], opts?: { reflow?: boolean }) => {
       const state = useTriage.getState();
       const open = (tasksArg ?? state.tasks).filter((t) => !t.done);
       if (open.length === 0) {
@@ -124,6 +127,7 @@ export default function Home() {
             now: toFloatingISO(new Date()),
             availableHours: state.availableHours,
             workingHours: state.workingHours,
+            reflow: opts?.reflow === true,
           },
         );
         setSchedule(blocks);
@@ -165,6 +169,58 @@ export default function Home() {
     [setIngest, runSchedule],
   );
 
+  const handleIngestImage = useCallback(
+    async (dataUrl: string) => {
+      setIngestLoading(true);
+      setIngestError(null);
+      try {
+        const result = await postJSON<{
+          tasks: Task[];
+          rightNow: Parameters<typeof setIngest>[1];
+          error?: string;
+        }>("/api/vision", {
+          image: dataUrl,
+          now: toFloatingISO(new Date()),
+          timezone: browserTimezone(),
+        });
+        if (!result.tasks || result.tasks.length === 0) {
+          setIngestError(result.error || "I couldn't read any tasks from that image.");
+          return;
+        }
+        setIngest(result.tasks, result.rightNow);
+        void runSchedule(result.tasks);
+      } catch (e) {
+        setIngestError(e instanceof Error ? e.message : "Couldn't read that image.");
+      } finally {
+        setIngestLoading(false);
+      }
+    },
+    [setIngest, runSchedule],
+  );
+
+  const handleCommand = useCallback(
+    async (message: string) => {
+      const state = useTriage.getState();
+      const { reply, actions } = await postJSON<{
+        reply: string;
+        actions: CommandAction[];
+      }>("/api/command", {
+        message,
+        tasks: state.tasks,
+        now: toFloatingISO(new Date()),
+        timezone: browserTimezone(),
+      });
+      const list = Array.isArray(actions) ? actions : [];
+      applyActions(list, Date.now());
+      const structural = list.filter((a) => a.kind !== "replan");
+      if (list.some((a) => a.kind === "replan")) {
+        void runSchedule(undefined, { reflow: true });
+      }
+      return { reply, appliedCount: structural.length };
+    },
+    [applyActions, runSchedule],
+  );
+
   const rightNowTask = rightNow
     ? tasks.find((t) => t.id === rightNow.taskId)
     : undefined;
@@ -188,16 +244,10 @@ export default function Home() {
 
   const rnSteps = rightNow ? steps[rightNow.taskId] ?? [] : [];
 
-  const copilotContext = tasks
-    .map(
-      (t, i) =>
-        `${i + 1}. ${t.title} — ${t.type}, due ${deadlineDateLabel(t.deadline)} ${clockLabel(
-          t.deadline,
-        )}, importance ${t.importance}/5, ~${formatDuration(t.estimatedMinutes)}${
-          t.done ? " (done)" : ""
-        }`,
-    )
-    .join("\n");
+  const focusTask = focusTaskId ? tasks.find((t) => t.id === focusTaskId) : undefined;
+  const focusSteps = focusTaskId ? steps[focusTaskId] ?? [] : [];
+  const streak = now != null ? currentStreak(history, now) : 0;
+  const openCount = tasks.filter((t) => !t.done).length;
 
   const hasTasks = tasks.length > 0;
 
@@ -214,10 +264,13 @@ export default function Home() {
         />
       ) : null}
 
+      {mounted && hasTasks ? <StreakStrip history={history} now={now} /> : null}
+
       <BrainDump
         loading={ingestLoading}
         error={ingestError}
         onIngest={handleIngest}
+        onIngestImage={handleIngestImage}
       />
 
       {hasTasks && rightNow && rightNowTask ? (
@@ -230,6 +283,7 @@ export default function Home() {
           breakdownError={breakdownError}
           onBreakdown={handleBreakdown}
           onToggleStep={(stepId) => toggleStep(rightNowTask.id, stepId)}
+          onFocus={() => setFocusTask(rightNowTask.id)}
         />
       ) : null}
 
@@ -258,6 +312,16 @@ export default function Home() {
         </section>
       )}
 
+      {mounted && hasTasks ? (
+        <MissedBlock
+          schedule={schedule}
+          tasks={tasks}
+          now={now}
+          loading={scheduleLoading}
+          onReflow={() => runSchedule(undefined, { reflow: true })}
+        />
+      ) : null}
+
       {hasTasks ? (
         <ThePlan
           schedule={schedule}
@@ -269,10 +333,14 @@ export default function Home() {
           onReplan={() => runSchedule()}
           onSetAvailableHours={setAvailableHours}
           onSetWorkingHours={setWorkingHours}
+          onFocusTask={setFocusTask}
+          shareHeadline={rightNow?.headline || "Today's plan"}
+          taskCount={openCount}
+          streak={streak}
         />
       ) : null}
 
-      {hasTasks ? <Copilot context={copilotContext} /> : null}
+      {hasTasks ? <Copilot onSend={handleCommand} /> : null}
 
       {/* Colophon */}
       <footer className="mt-20">
@@ -298,6 +366,20 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {focusTask ? (
+        <FocusMode
+          task={focusTask}
+          steps={focusSteps}
+          prefs={focusPrefs}
+          onToggleStep={(stepId) => toggleStep(focusTask.id, stepId)}
+          onComplete={() => {
+            if (!focusTask.done) toggleTask(focusTask.id);
+            setFocusTask(null);
+          }}
+          onClose={() => setFocusTask(null)}
+        />
+      ) : null}
     </main>
   );
 }
