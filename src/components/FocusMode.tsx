@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import type { FocusPrefs, Step, Task } from "@/lib/types";
 import { cn, formatDuration, totalMinutes } from "@/lib/utils";
@@ -36,6 +36,7 @@ export function FocusMode({
   onClose: () => void;
 }) {
   const reduce = useReducedMotion();
+  const panelRef = useRef<HTMLDivElement>(null);
   const focusSecs = Math.max(1, prefs.focusMinutes) * 60;
   const breakSecs = Math.max(1, prefs.breakMinutes) * 60;
 
@@ -47,38 +48,58 @@ export function FocusMode({
   const total = phase === "focus" ? focusSecs : breakSecs;
   const progress = 1 - secondsLeft / total;
 
-  // Countdown
+  // Countdown with atomic phase rollover on the 1 -> 0 transition (no "0:00" frame)
   useEffect(() => {
     if (!running) return;
-    const id = setInterval(() => setSecondsLeft((s) => (s > 0 ? s - 1 : 0)), 1000);
+    const id = setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s > 1) return s - 1;
+        if (phase === "focus") {
+          setCycles((c) => c + 1);
+          setPhase("break");
+          return breakSecs;
+        }
+        setPhase("focus");
+        return focusSecs;
+      });
+    }, 1000);
     return () => clearInterval(id);
-  }, [running, phase]);
+  }, [running, phase, focusSecs, breakSecs]);
 
-  // Phase rollover
+  // Escape to close, Tab trap, scroll lock, and focus management (WCAG 2.4.3)
   useEffect(() => {
-    if (secondsLeft > 0) return;
-    if (phase === "focus") {
-      setCycles((c) => c + 1);
-      setPhase("break");
-      setSecondsLeft(breakSecs);
-    } else {
-      setPhase("focus");
-      setSecondsLeft(focusSecs);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secondsLeft]);
+    const prevActive = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
 
-  // Escape to close + lock scroll
-  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key === "Tab" && panelRef.current) {
+        const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey && (active === first || active === panelRef.current)) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
+    const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      document.body.style.overflow = prevOverflow;
+      prevActive?.focus();
     };
   }, [onClose]);
 
@@ -112,10 +133,12 @@ export function FocusMode({
         aria-hidden
       />
       <motion.div
+        ref={panelRef}
+        tabIndex={-1}
         initial={reduce ? false : { opacity: 0, scale: 0.98, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-        className="relative z-10 w-full max-w-xl rounded-[4px] border border-ink bg-paper p-6 sm:p-8"
+        className="relative z-10 w-full max-w-xl rounded-[4px] border border-ink bg-paper p-6 outline-none sm:p-8"
       >
         <div className="flex items-start justify-between">
           <div>

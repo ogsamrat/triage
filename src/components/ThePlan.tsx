@@ -129,11 +129,11 @@ export function ThePlan({
           />
         </label>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="flex w-full flex-wrap items-center gap-3 sm:ml-auto sm:w-auto">
           {schedule.length ? (
             <ShareButton
               headline={shareHeadline}
-              focus={formatDuration(focusMin)}
+              focus={focusMin > 0 ? formatDuration(focusMin) : "focused work"}
               tasks={taskCount}
               streak={streak}
             />

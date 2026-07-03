@@ -129,7 +129,11 @@ export function BrainDump({
           >
             <textarea
               value={value}
-              onChange={(e) => setValue(e.target.value)}
+              onChange={(e) => {
+                setValue(e.target.value);
+                // Keep manual edits from being clobbered by the next transcript merge.
+                if (listening) baseRef.current = e.target.value;
+              }}
               onPaste={onPaste}
               onKeyDown={(e) => {
                 if ((e.metaKey || e.ctrlKey) && e.key === "Enter") submit();
