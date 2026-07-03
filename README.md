@@ -58,14 +58,19 @@ call the dentist, rent due the 1st, prep for a 2pm interview Thursday
 
 | Area | What it does |
 | --- | --- |
-| **Brain-dump** | One large editorial input with live speech-to-text (Web Speech API), feature-detected with a graceful typed fallback. |
+| **Brain-dump** | One large editorial input: type, speak (live speech-to-text), drop or paste a **screenshot** of a syllabus/whiteboard, or **import an `.ics`** — all parsed into dated tasks. |
 | **Triage board** | AI parses free text into dated, ranked tasks — type, effort estimate, importance/urgency, and a one-line editorial rationale; the list animates as it re-orders. |
 | **Right Now** | The single highest-value task to start, the reason, and a first step doable in under five minutes. |
 | **Break it down** | Decomposes the task into 3–8 concrete, startable steps as a checklist; optional read-aloud (text-to-speech). |
 | **The Plan** | A realistic, no-overlap, deadline-aware time-blocked day; a "Today I have N hours" control re-plans on demand. |
+| **Screenshot to tasks** | Drop a photo of a syllabus, planner, or whiteboard and a vision model (Llama 4 Scout) reads the tasks straight off the image. |
+| **Conversational edits** | The copilot *acts* on your board — "I finished rent," "push the essay to Wednesday," "drop the dentist," "reflow the day" — via structured, validated actions, not just chat. |
+| **Missed-block reflow** | When a block slips past its time and the task isn't done, Triage flags that you're behind and rebuilds the rest of the day from now. |
+| **Focus mode** | A Pomodoro overlay for the task at hand — timer, break cycles, and its breakdown steps to tick off live. |
+| **Streak** | A daily-completion streak strip that rewards showing up, persisted locally. |
+| **Share card** | A one-click, dynamically generated Open Graph image of your plan (`next/og`), plus native share / copy. |
 | **Calendar** | Per-block "Add to Google Calendar" deep links, plus a one-click `.ics` export — no OAuth. |
 | **Proactive nudges** | Context-aware prompts from the current time, overdue work, and gaps in the plan. |
-| **Copilot** | Streaming chat — "what should I drop?" — grounded in your current workload. |
 | **Polish** | Light / dark "ink" theme, WCAG-AA contrast, full keyboard support, reduced-motion safety, `localStorage` persistence, seeded demo data, and graceful AI errors. It never shows a blank screen. |
 
 ## Architecture
@@ -96,8 +101,10 @@ Every route validates with Zod, retries with backoff, and degrades gracefully �
 | --- | --- | --- |
 | `/api/ingest` | POST | Parse + prioritize + pick "Right Now" in one round trip |
 | `/api/breakdown` | POST | Decompose a task into startable steps |
-| `/api/schedule` | POST | Lay tasks into a no-overlap, deadline-aware day |
-| `/api/chat` | POST | Streaming copilot grounded in the workload |
+| `/api/schedule` | POST | Lay tasks into a no-overlap, deadline-aware day (with a reflow mode) |
+| `/api/command` | POST | Turn an instruction into validated actions that mutate the board |
+| `/api/vision` | POST | Read tasks out of a screenshot (Llama 4 Scout, multimodal) |
+| `/api/og` | GET | Render the shareable plan card as a PNG (`next/og`) |
 
 ## Tech Stack
 
@@ -107,7 +114,7 @@ Every route validates with Zod, retries with backoff, and degrades gracefully �
 | Styling | Tailwind CSS v4 (CSS-first `@theme`, tokens as CSS variables) |
 | Motion | Framer Motion (restrained, reduced-motion safe) |
 | AI | Vercel AI SDK (`generateObject` + Zod, `streamText`) |
-| Model | Groq · Llama 3.3 70B (isolated in one file, swappable to Anthropic / OpenAI) |
+| Model | Groq · Llama 3.3 70B (text) + Llama 4 Scout (vision), isolated in one file, swappable to Anthropic / OpenAI |
 | State | Zustand + `persist` to `localStorage` (no database) |
 | Type | Fraunces · Geist · Geist Mono via `next/font` |
 | Voice | Web Speech API (recognition + synthesis) |
